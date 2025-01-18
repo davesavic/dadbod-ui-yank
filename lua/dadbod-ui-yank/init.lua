@@ -25,40 +25,42 @@ local function get_dadbod_rows(range, with_headers)
 	local full_lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
 	local global_headers = get_headers(full_lines)
 
-	local headers = nil
-	local rows = {}
-	local data_start = false
-	local selection_contains_headers = false
+	local dash_line_index = nil
+	local local_headers = nil
 
 	for i, line in ipairs(lines) do
 		if line:match("^%-%-+") then
-			data_start = true
+			dash_line_index = i
 			if i > 1 then
-				headers = vim.split(lines[i - 1], "|", { plain = true, trimempty = true })
-				for j, col in ipairs(headers) do
-					headers[j] = vim.trim(col)
+				local maybe_header_line = vim.split(lines[i - 1], "|", { plain = true, trimempty = true })
+				if #maybe_header_line > 1 then
+					local_headers = {}
+					for j, col in ipairs(maybe_header_line) do
+						local_headers[j] = vim.trim(col)
+					end
 				end
-				selection_contains_headers = true
 			end
-		elseif
-			(data_start or (with_headers and not selection_contains_headers))
-			and #vim.trim(line) > 0
-			and not line:match("%(%d+ rows?%)")
-		then
+			break
+		end
+	end
+
+	local headers = local_headers or (with_headers and global_headers or nil)
+
+	local rows = {}
+	for i, line in ipairs(lines) do
+		if i == dash_line_index or i == dash_line_index - 1 then
+			goto continue
+		end
+
+		line = vim.trim(line)
+		if line ~= "" and not line:match("%(%d+ rows?%)") and not line:match("^%-%-+") then
 			local row = vim.split(line, "|", { plain = true, trimempty = true })
 			for j, col in ipairs(row) do
 				row[j] = vim.trim(col)
 			end
 			table.insert(rows, row)
 		end
-	end
-
-	if with_headers then
-		if not selection_contains_headers then
-			headers = global_headers
-		end
-	else
-		headers = nil
+		::continue::
 	end
 
 	return headers, rows
