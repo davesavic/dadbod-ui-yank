@@ -23,10 +23,7 @@ local function get_dadbod_rows(range, with_headers)
 	end
 
 	local full_lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-	print(vim.inspect(full_lines))
-
 	local global_headers = get_headers(full_lines)
-	print(vim.inspect(global_headers))
 
 	local headers = nil
 	local rows = {}
@@ -43,7 +40,11 @@ local function get_dadbod_rows(range, with_headers)
 				end
 				selection_contains_headers = true
 			end
-		elseif data_start and #vim.trim(line) > 0 and not line:match("%(%d+ rows?%)") then
+		elseif
+			(data_start or (with_headers and not selection_contains_headers))
+			and #vim.trim(line) > 0
+			and not line:match("%(%d+ rows?%)")
+		then
 			local row = vim.split(line, "|", { plain = true, trimempty = true })
 			for j, col in ipairs(row) do
 				row[j] = vim.trim(col)
