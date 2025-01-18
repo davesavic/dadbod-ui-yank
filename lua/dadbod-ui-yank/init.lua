@@ -33,7 +33,7 @@ local function get_dadbod_rows(range, with_headers)
 	for i, line in ipairs(lines) do
 		if line:match("^%-%-+") then
 			data_start = true
-			if i > 1 and with_headers then
+			if i > 1 then
 				headers = vim.split(lines[i - 1], "|", { plain = true, trimempty = true })
 				for j, col in ipairs(headers) do
 					headers[j] = vim.trim(col)
@@ -55,6 +55,11 @@ local function get_dadbod_rows(range, with_headers)
 		end
 	else
 		headers = nil
+	end
+
+	if #rows == 0 then
+		vim.notify("No valid rows found in the buffer.", vim.log.levels.WARN)
+		return nil, {}
 	end
 
 	return headers, rows
