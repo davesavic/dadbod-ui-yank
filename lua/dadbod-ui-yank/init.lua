@@ -23,7 +23,10 @@ local function get_dadbod_rows(range, with_headers)
 	end
 
 	local full_lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+	print(vim.inspect(full_lines))
+
 	local global_headers = get_headers(full_lines)
+	print(vim.inspect(global_headers))
 
 	local headers = nil
 	local rows = {}
@@ -55,11 +58,6 @@ local function get_dadbod_rows(range, with_headers)
 		end
 	else
 		headers = nil
-	end
-
-	if #rows == 0 then
-		vim.notify("No valid rows found in the buffer.", vim.log.levels.WARN)
-		return nil, {}
 	end
 
 	return headers, rows
