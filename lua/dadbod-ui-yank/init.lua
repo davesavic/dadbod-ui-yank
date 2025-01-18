@@ -112,13 +112,13 @@ function M.setup(user_opts)
 	local default_opts = {
 		with_headers = true,
 	}
-	user_opts = vim.tbl_extend("force", default_opts, user_opts)
+	M.opts = vim.tbl_deep_extend("force", default_opts, user_opts or {})
 
 	vim.api.nvim_create_user_command("DBUIYankAsJSON", function(opts)
 		M.yank_as_format(
 			"json",
 			opts.range ~= 0 and { start = opts.line1 - 1, ["end"] = opts.line2 } or nil,
-			opts.with_headers
+			M.opts.with_headers
 		)
 	end, { range = true })
 
@@ -126,7 +126,7 @@ function M.setup(user_opts)
 		M.yank_as_format(
 			"csv",
 			opts.range ~= 0 and { start = opts.line1 - 1, ["end"] = opts.line2 } or nil,
-			opts.with_headers
+			M.opts.with_headers
 		)
 	end, { range = true })
 
@@ -134,7 +134,7 @@ function M.setup(user_opts)
 		M.yank_as_format(
 			"xml",
 			opts.range ~= 0 and { start = opts.line1 - 1, ["end"] = opts.line2 } or nil,
-			opts.with_headers
+			M.opts.with_headers
 		)
 	end, { range = true })
 end
