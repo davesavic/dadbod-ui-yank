@@ -1,1 +1,1 @@
-require("dadbod_ui_yank").setup()
+require("dadbod-ui-yank").setup()
