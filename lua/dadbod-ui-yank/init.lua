@@ -1,43 +1,79 @@
 local M = {}
 
-local function get_dadbod_rows(range)
+local function get_headers(lines)
+	for i, line in ipairs(lines) do
+		if line:match("^%-%-+") then
+			return vim.split(lines[i - 1] or "", "|", { plain = true, trimempty = true })
+		end
+	end
+	return {}
+end
+
+local function get_dadbod_rows(range, with_headers)
 	local lines
 	if range then
 		lines = vim.api.nvim_buf_get_lines(0, range.start, range["end"], false)
 	else
-		local cursor = vim.api.nvim_win_get_cursor(0) -- {line, col}
+		local cursor = vim.api.nvim_win_get_cursor(0)
 		lines = vim.api.nvim_buf_get_lines(0, cursor[1] - 1, cursor[1], false)
 	end
 
+	local headers = with_headers and get_headers(lines) or nil
 	local rows = {}
+	local data_start = false
 
 	for _, line in ipairs(lines) do
-		if not line:match("^%-%-+") and not line:match("%(%d+ rows?%)") and #vim.trim(line) > 0 then
+		if line:match("^%-%-+") then
+			data_start = true
+		elseif data_start and #vim.trim(line) > 0 and not line:match("%(%d+ rows?%)") then
 			local row = vim.split(line, "|", { plain = true, trimempty = true })
-			for i, col in ipairs(row) do
-				row[i] = vim.trim(col)
+			for j, col in ipairs(row) do
+				row[j] = vim.trim(col)
 			end
 			table.insert(rows, row)
 		end
 	end
 
-	return rows
+	return headers, rows
 end
 
-local function to_json(rows)
-	return vim.json.encode(rows)
+local function to_json(headers, rows)
+	if headers and #headers > 0 then
+		local json_rows = {}
+		for _, row in ipairs(rows) do
+			local json_object = {}
+			for i, value in ipairs(row) do
+				json_object[headers[i]] = value
+			end
+			table.insert(json_rows, json_object)
+		end
+		return vim.json.encode(json_rows)
+	else
+		return vim.json.encode(rows)
+	end
 end
 
-local function to_csv(rows)
+local function to_csv(headers, rows)
 	local csv = {}
+	if headers and #headers > 0 then
+		table.insert(csv, table.concat(headers, ","))
+	end
+
 	for _, row in ipairs(rows) do
 		table.insert(csv, table.concat(row, ","))
 	end
 	return table.concat(csv, "\n")
 end
 
-local function to_xml(rows)
+local function to_xml(headers, rows)
 	local xml = { "<rows>" }
+	if headers and #headers > 0 then
+		table.insert(xml, "  <headers>")
+		for _, header in ipairs(headers) do
+			table.insert(xml, "    <header>" .. vim.fn.escape(header, '&<>"') .. "</header>")
+		end
+		table.insert(xml, "  </headers>")
+	end
 	for _, row in ipairs(rows) do
 		table.insert(xml, "  <row>")
 		for _, col in ipairs(row) do
@@ -49,8 +85,8 @@ local function to_xml(rows)
 	return table.concat(xml, "\n")
 end
 
-function M.yank_as_format(format, range)
-	local rows = get_dadbod_rows(range)
+function M.yank_as_format(format, range, with_headers)
+	local headers, rows = get_dadbod_rows(range, with_headers)
 	if not rows or #rows == 0 then
 		vim.notify("No valid rows found in the buffer.", vim.log.levels.WARN)
 		return
@@ -58,11 +94,11 @@ function M.yank_as_format(format, range)
 
 	local formatted_data
 	if format == "json" then
-		formatted_data = to_json(rows)
+		formatted_data = to_json(headers, rows)
 	elseif format == "csv" then
-		formatted_data = to_csv(rows)
+		formatted_data = to_csv(headers, rows)
 	elseif format == "xml" then
-		formatted_data = to_xml(rows)
+		formatted_data = to_xml(headers, rows)
 	else
 		vim.notify("Unsupported format: " .. format, vim.log.levels.ERROR)
 		return
@@ -72,17 +108,34 @@ function M.yank_as_format(format, range)
 	vim.notify("Yanked rows as " .. format)
 end
 
-function M.setup()
-	vim.api.nvim_create_user_command("DadbodYankAsJSON", function(opts)
-		M.yank_as_format("json", opts.range ~= 0 and { start = opts.line1 - 1, ["end"] = opts.line2 } or nil)
+function M.setup(user_opts)
+	local default_opts = {
+		with_headers = true,
+	}
+	user_opts = vim.tbl_extend("force", default_opts, user_opts)
+
+	vim.api.nvim_create_user_command("DBUIYankAsJSON", function(opts)
+		M.yank_as_format(
+			"json",
+			opts.range ~= 0 and { start = opts.line1 - 1, ["end"] = opts.line2 } or nil,
+			opts.with_headers
+		)
 	end, { range = true })
 
-	vim.api.nvim_create_user_command("DadbodYankAsCSV", function(opts)
-		M.yank_as_format("csv", opts.range ~= 0 and { start = opts.line1 - 1, ["end"] = opts.line2 } or nil)
+	vim.api.nvim_create_user_command("DBUIYankAsCSV", function(opts)
+		M.yank_as_format(
+			"csv",
+			opts.range ~= 0 and { start = opts.line1 - 1, ["end"] = opts.line2 } or nil,
+			opts.with_headers
+		)
 	end, { range = true })
 
-	vim.api.nvim_create_user_command("DadbodYankAsXML", function(opts)
-		M.yank_as_format("xml", opts.range ~= 0 and { start = opts.line1 - 1, ["end"] = opts.line2 } or nil)
+	vim.api.nvim_create_user_command("DBUIYankAsXML", function(opts)
+		M.yank_as_format(
+			"xml",
+			opts.range ~= 0 and { start = opts.line1 - 1, ["end"] = opts.line2 } or nil,
+			opts.with_headers
+		)
 	end, { range = true })
 end
 
