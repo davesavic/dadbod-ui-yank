@@ -17,3 +17,19 @@ A Neovim plugin to yank query results from `vim-dadbod-ui` into various formats 
     require('dadbod-ui-yank').setup()
   end,
 }
+```
+
+### Defaults
+```lua
+local default_opts = {
+    with_headers = true,
+}
+```
+
+## Usage
+- `:DBUIYankAsCSV` - Yank query results in CSV format.
+- `:DBUIYankAsJSON` - Yank query results in JSON format.
+- `:DBUIYankAsXML` - Yank query results in XML format.
+
+## License
+MIT
