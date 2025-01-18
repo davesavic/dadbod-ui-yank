@@ -22,13 +22,24 @@ local function get_dadbod_rows(range, with_headers)
 		lines = vim.api.nvim_buf_get_lines(0, cursor[1] - 1, cursor[1], false)
 	end
 
-	local headers = with_headers and get_headers(lines) or nil
+	local full_lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+	local global_headers = get_headers(full_lines)
+
+	local headers = nil
 	local rows = {}
 	local data_start = false
+	local selection_contains_headers = false
 
-	for _, line in ipairs(lines) do
+	for i, line in ipairs(lines) do
 		if line:match("^%-%-+") then
 			data_start = true
+			if i > 1 and with_headers then
+				headers = vim.split(lines[i - 1], "|", { plain = true, trimempty = true })
+				for j, col in ipairs(headers) do
+					headers[j] = vim.trim(col)
+				end
+				selection_contains_headers = true
+			end
 		elseif data_start and #vim.trim(line) > 0 and not line:match("%(%d+ rows?%)") then
 			local row = vim.split(line, "|", { plain = true, trimempty = true })
 			for j, col in ipairs(row) do
@@ -36,6 +47,14 @@ local function get_dadbod_rows(range, with_headers)
 			end
 			table.insert(rows, row)
 		end
+	end
+
+	if with_headers then
+		if not selection_contains_headers then
+			headers = global_headers
+		end
+	else
+		headers = nil
 	end
 
 	return headers, rows
