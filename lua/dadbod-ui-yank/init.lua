@@ -48,7 +48,7 @@ local function get_dadbod_rows(range, with_headers)
 
 	local rows = {}
 	for i, line in ipairs(lines) do
-		if i == dash_line_index or i == dash_line_index - 1 then
+		if dash_line_index and (i == dash_line_index or i == dash_line_index - 1) then
 			goto continue
 		end
 
