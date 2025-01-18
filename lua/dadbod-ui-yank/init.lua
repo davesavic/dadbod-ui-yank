@@ -3,7 +3,11 @@ local M = {}
 local function get_headers(lines)
 	for i, line in ipairs(lines) do
 		if line:match("^%-%-+") then
-			return vim.split(lines[i - 1] or "", "|", { plain = true, trimempty = true })
+			local headers = vim.split(lines[i - 1] or "", "|", { plain = true, trimempty = true })
+			for j, header in ipairs(headers) do
+				headers[j] = vim.trim(header)
+			end
+			return headers
 		end
 	end
 	return {}
